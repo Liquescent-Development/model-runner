@@ -24,7 +24,7 @@ const ConfigurationLlamaCpp = `(version 1)
 ;;; (though we could further experiment to deny certain sub-permissions):
 ;;;   - authorization
 ;;;   - darwin
-;;;   - iokit
+;;;   - iokit (REQUIRED for Metal GPU access)
 ;;;   - mach
 ;;;   - socket
 ;;;   - syscall
@@ -39,8 +39,23 @@ const ConfigurationLlamaCpp = `(version 1)
 (allow network-bind network-inbound
     (regex #"inference.*-[0-9]+\.sock$"))
 
-;;; Deny access to the camera and microphone.
-(deny device*)
+;;; Deny access to camera and microphone specifically, but allow GPU/Metal.
+;;; Metal requires IOKit access to communicate with the GPU.
+(deny device-camera)
+(deny device-microphone)
+
+;;; Allow IOKit access for Metal GPU acceleration.
+;;; This is required for llama.cpp to use Metal on Apple Silicon.
+(allow iokit-open
+    (iokit-user-client-class "AGXDeviceUserClient")
+    (iokit-user-client-class "AGXCommandQueue")
+    (iokit-user-client-class "AGXSharedUserClient")
+    (iokit-user-client-class "AGXAccelerator")
+    (iokit-user-client-class "IOAccelerator")
+    (iokit-user-client-class "IOAcceleratorES")
+    (iokit-user-client-class "IOSurfaceRootUserClient")
+    (iokit-user-client-class "AppleIntelMEUserClient")
+    (iokit-user-client-class "RootDomainUserClient"))
 
 ;;; Deny access to NVRAM settings.
 (deny nvram*)

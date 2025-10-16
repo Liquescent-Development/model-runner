@@ -91,6 +91,33 @@ func (l *llamaCpp) UsesExternalModelManagement() bool {
 	return false
 }
 
+// getLlamaServerBinaryName returns the appropriate llama-server binary name.
+// It checks for both the Docker-specific name and the standard llama.cpp name.
+func getLlamaServerBinaryName(basePath string) string {
+	dockerName := "com.docker.llama-server"
+	standardName := "llama-server"
+	
+	if runtime.GOOS == "windows" {
+		dockerName += ".exe"
+		standardName += ".exe"
+	}
+	
+	// Check for Docker-specific binary first
+	dockerPath := filepath.Join(basePath, dockerName)
+	if _, err := os.Stat(dockerPath); err == nil {
+		return dockerName
+	}
+	
+	// Fall back to standard llama.cpp binary name
+	standardPath := filepath.Join(basePath, standardName)
+	if _, err := os.Stat(standardPath); err == nil {
+		return standardName
+	}
+	
+	// Default to Docker name if neither exists (will fail later with better error)
+	return dockerName
+}
+
 // Install implements inference.Backend.Install.
 func (l *llamaCpp) Install(ctx context.Context, httpClient *http.Client) error {
 	l.updatedLlamaCpp = false
@@ -102,10 +129,11 @@ func (l *llamaCpp) Install(ctx context.Context, httpClient *http.Client) error {
 		return errors.New("platform not supported")
 	}
 
-	llamaServerBin := "com.docker.llama-server"
-	if runtime.GOOS == "windows" {
-		llamaServerBin = "com.docker.llama-server.exe"
+	binPath := l.vendoredServerStoragePath
+	if l.updatedLlamaCpp {
+		binPath = l.updatedServerStoragePath
 	}
+	llamaServerBin := getLlamaServerBinaryName(binPath)
 
 	l.status = "installing"
 
@@ -172,7 +200,7 @@ func (l *llamaCpp) Run(ctx context.Context, socket, model string, mode inference
 			command.Stderr = out
 		},
 		binPath,
-		filepath.Join(binPath, "com.docker.llama-server"),
+		filepath.Join(binPath, getLlamaServerBinaryName(binPath)),
 		args...,
 	)
 	if err != nil {
@@ -362,11 +390,12 @@ func (l *llamaCpp) checkGPUSupport(ctx context.Context) bool {
 		ctx,
 		sandbox.ConfigurationLlamaCpp,
 		func(command *exec.Cmd) {
-			command.Stdout = &output
-			command.Stderr = &output
+		command.Stdout = &output
+		command.Stderr = &output
 		},
-		filepath.Join(binPath, "com.docker.llama-server"),
-		"--list-devices",
+		binPath,  // ← Just the directory
+		filepath.Join(binPath, getLlamaServerBinaryName(binPath)),
+		"--list-devices",  // ← The argument
 	)
 	if err != nil {
 		l.log.Warnf("Failed to start sandboxed llama.cpp process to probe GPU support: %v", err)

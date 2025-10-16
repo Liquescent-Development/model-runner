@@ -1,0 +1,85 @@
+name: Build model-runner for macOS
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'Makefile'
+      - '.github/workflows/build-macos.yml'
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'Makefile'
+      - '.github/workflows/build-macos.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build model-runner for macOS ARM64
+        run: |
+          CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o model-runner-darwin-arm64 ./main.go
+
+      - name: Verify binary
+        run: |
+          file model-runner-darwin-arm64
+          ls -lh model-runner-darwin-arm64
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-runner-darwin-arm64
+          path: model-runner-darwin-arm64
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Create Release (on push to main)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: latest-${{ github.sha }}
+          name: macOS ARM64 Build - ${{ github.sha }}
+          body: |
+            Automated build of model-runner for macOS ARM64 (Apple Silicon)
+
+            **Commit:** ${{ github.sha }}
+            **Branch:** ${{ github.ref_name }}
+            **Date:** ${{ github.event.head_commit.timestamp }}
+
+            ## Installation
+
+            Download the binary and make it executable:
+            ```bash
+            chmod +x model-runner-darwin-arm64
+            ./model-runner-darwin-arm64
+            ```
+
+            ## Usage
+
+            Set environment variables as needed:
+            ```bash
+            MODEL_RUNNER_PORT=13434 ./model-runner-darwin-arm64
+            ```
+          files: model-runner-darwin-arm64
+          draft: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -90,12 +90,17 @@ func (l *llamaCpp) downloadLatestLlamaCpp(ctx context.Context, log logging.Logge
 		log.Warnf("could not fing the %s tag, hub response: %s", desiredTag, body)
 		return fmt.Errorf("could not find the %s tag", desiredTag)
 	}
-
-	bundledVersionFile := filepath.Join(vendoredServerStoragePath, "com.docker.llama-server.digest")
+	binaryName := getLlamaServerBinaryName(vendoredServerStoragePath)
+	bundledVersionFile := filepath.Join(vendoredServerStoragePath, binaryName + ".digest")
 	currentVersionFile := filepath.Join(filepath.Dir(llamaCppPath), ".llamacpp_version")
 
+	// If digest file doesn't exist (e.g., homebrew installation), skip version check
 	data, err := os.ReadFile(bundledVersionFile)
 	if err != nil {
+		if os.IsNotExist(err) {
+			log.Infof("No digest file found - assuming custom llama.cpp installation, skipping version check")
+			return nil
+		}
 		return fmt.Errorf("failed to read bundled llama.cpp version: %w", err)
 	} else if strings.TrimSpace(string(data)) == latest {
 		l.status = fmt.Sprintf("running llama.cpp %s (%s) version: %s",
