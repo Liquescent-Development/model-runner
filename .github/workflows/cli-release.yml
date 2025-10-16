@@ -1,0 +1,117 @@
+name: Release model CLI plugin
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'cmd/cli/**'
+      - '.github/workflows/cli-release.yml'
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'cmd/cli/**'
+      - '.github/workflows/cli-release.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: cmd/cli/go.mod
+          cache: true
+          cache-dependency-path: cmd/cli/go.sum
+
+      - name: Build docker-model plugin for macOS ARM64
+        working-directory: cmd/cli
+        run: |
+          GOOS=darwin GOARCH=arm64 CGO_ENABLED=1 go build -ldflags="-s -w" -o docker-model .
+
+      - name: Verify binary
+        working-directory: cmd/cli
+        run: |
+          file docker-model
+          ls -lh docker-model
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-model-darwin-arm64
+          path: cmd/cli/docker-model
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Create Release (on push to main)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: cli-latest-${{ github.sha }}
+          name: Docker Model CLI - ${{ github.sha }}
+          body: |
+            Docker Model CLI plugin for macOS ARM64 (Apple Silicon)
+
+            **Commit:** ${{ github.sha }}
+            **Branch:** ${{ github.ref_name }}
+            **Date:** ${{ github.event.head_commit.timestamp }}
+
+            ## Installation
+
+            Install as a Docker CLI plugin:
+
+            ```bash
+            # Create plugin directory
+            mkdir -p ~/.docker/cli-plugins
+
+            # Download and install (replace SHA with commit from release name above)
+            curl -L https://github.com/${{ github.repository }}/releases/download/cli-latest-${{ github.sha }}/docker-model -o ~/.docker/cli-plugins/docker-model
+            chmod +x ~/.docker/cli-plugins/docker-model
+
+            # Verify installation
+            docker model --help
+            ```
+
+            **Or download the binary from the Assets section below.**
+
+            ## Prerequisites
+
+            The CLI requires a running model-runner server:
+
+            **Option 1: Docker Desktop**
+            - If you have Docker Desktop installed, model-runner is included
+
+            **Option 2: Standalone model-runner**
+            - Download the model-runner from the [releases page](https://github.com/${{ github.repository }}/releases)
+            - Install llama.cpp: `brew install llama.cpp`
+            - Start the server:
+              ```bash
+              LLAMA_SERVER_PATH=/opt/homebrew/bin MODEL_RUNNER_PORT=12434 ./model-runner-darwin-arm64
+              ```
+
+            ## Usage
+
+            ```bash
+            # List models
+            docker model list
+
+            # Pull and run a model
+            docker model pull ai/gemma3
+            docker model run gemma3 "Tell me a joke"
+
+            # Package and push a GGUF model
+            docker model package --gguf ./model.gguf --push myorg/model:latest
+            ```
+
+            For more commands, run `docker model --help`
+          files: |
+            cmd/cli/docker-model
+          draft: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
