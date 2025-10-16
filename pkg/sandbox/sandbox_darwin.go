@@ -82,28 +82,28 @@ const ConfigurationLlamaCpp = `(version 1)
 ;;; NOTE: For some reason (deny file-read*) really doesn't like to play nice
 ;;; with llama.cpp, so for that reason we'll avoid a blanket ban and just ban
 ;;; directories that might contain sensitive data.
+;;; NOTE: We allow the entire HOMEDIR for standalone/Homebrew usage, as llama.cpp
+;;; needs access to various paths under the home directory to function properly.
 (deny file-map-executable)
 (deny file-write*)
 (deny file-read*
-    (subpath "/Applications")
     (subpath "/private/etc")
     (subpath "/Library")
-    (subpath "/Users")
     (subpath "/Volumes"))
 (allow file-read* file-map-executable
     (subpath "/usr")
     (subpath "/System")
     (subpath "/opt/homebrew")
+    (subpath "/private/tmp")
+    (subpath "/private/var/folders")
     (regex #"Docker\.app/Contents/Resources/model-runner")
     (subpath "[UPDATEDBINPATH]")
-    (subpath "[UPDATEDLIBPATH]"))
+    (subpath "[UPDATEDLIBPATH]")
+    (subpath "[HOMEDIR]"))
 (allow file-write*
     (literal "/dev/null")
+    (subpath "/private/tmp")
     (subpath "/private/var")
-    (subpath "[HOMEDIR]/Library/Containers/com.docker.docker/Data")
-    (subpath "[WORKDIR]"))
-(allow file-read*
-    (subpath "[HOMEDIR]/.docker/models")
     (subpath "[HOMEDIR]/Library/Containers/com.docker.docker/Data")
     (subpath "[WORKDIR]"))
 `

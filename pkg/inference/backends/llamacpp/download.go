@@ -99,7 +99,7 @@ func (l *llamaCpp) downloadLatestLlamaCpp(ctx context.Context, log logging.Logge
 	if err != nil {
 		if os.IsNotExist(err) {
 			log.Infof("No digest file found - assuming custom llama.cpp installation, skipping version check")
-			return nil
+			return errLlamaCppUpToDate // Return "up to date" so it doesn't try to use updated path
 		}
 		return fmt.Errorf("failed to read bundled llama.cpp version: %w", err)
 	} else if strings.TrimSpace(string(data)) == latest {
