@@ -93,6 +93,7 @@ const ConfigurationLlamaCpp = `(version 1)
 (allow file-read* file-map-executable
     (subpath "/usr")
     (subpath "/System")
+    (subpath "/opt/homebrew")
     (regex #"Docker\.app/Contents/Resources/model-runner")
     (subpath "[UPDATEDBINPATH]")
     (subpath "[UPDATEDLIBPATH]"))
