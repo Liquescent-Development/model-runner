@@ -64,6 +64,13 @@ jobs:
             **Branch:** ${{ github.ref_name }}
             **Date:** ${{ github.event.head_commit.timestamp }}
 
+            ## Prerequisites
+
+            You need llama.cpp installed for this to work:
+            ```bash
+            brew install llama.cpp
+            ```
+
             ## Installation
 
             Download the binary and make it executable:
@@ -74,10 +81,21 @@ jobs:
 
             ## Usage
 
-            Set environment variables as needed:
+            **IMPORTANT:** You must set `LLAMA_SERVER_PATH` to point to your llama.cpp installation:
+
             ```bash
-            MODEL_RUNNER_PORT=13434 ./model-runner-darwin-arm64
+            # For Homebrew on Apple Silicon:
+            LLAMA_SERVER_PATH=/opt/homebrew/bin MODEL_RUNNER_PORT=12434 ./model-runner-darwin-arm64
+
+            # For Homebrew on Intel:
+            LLAMA_SERVER_PATH=/usr/local/bin MODEL_RUNNER_PORT=12434 ./model-runner-darwin-arm64
             ```
+
+            **Verification:**
+            The logs should show:
+            - `LLAMA_SERVER_PATH: /opt/homebrew/bin` (or your configured path)
+            - `No digest file found - assuming custom llama.cpp installation, skipping version check`
+            - `installed llama-server with gpuSupport=true` (if Metal GPU is available)
           files: model-runner-darwin-arm64
           draft: false
           prerelease: true

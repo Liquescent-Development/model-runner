@@ -111,6 +111,8 @@ make docker-run PORT=8080 MODELS_PATH=/path/to/models  # Run in container
 - `MODEL_RUNNER_SOCK` - Unix socket path (default: model-runner.sock)
 - `MODELS_PATH` - Model storage directory (default: ~/.docker/models)
 - `LLAMA_SERVER_PATH` - Path to llama.cpp server binaries (default: /Applications/Docker.app/Contents/Resources/model-runner/bin)
+  - **For Homebrew installations:** Set to `/opt/homebrew/bin` (Apple Silicon) or `/usr/local/bin` (Intel)
+  - **For Docker Desktop:** Use default or set to Docker.app path
 - `LLAMA_ARGS` - Additional arguments for llama.cpp (e.g., "--verbose --ctx-size 2048")
 - `LLAMA_SERVER_VERSION` - Desired llama.cpp server version (default: latest)
 - `DISABLE_SERVER_UPDATE` - Disable auto-update of llama.cpp server
@@ -171,6 +173,24 @@ MODEL_RUNNER_PORT=13434 ./model-runner
 # Terminal 2: Use CLI
 MODEL_RUNNER_HOST=http://localhost:13434 ./model-cli list
 ```
+
+### Running with Homebrew llama.cpp
+
+If you have llama.cpp installed via Homebrew, you need to set the path:
+
+```bash
+# Install llama.cpp via Homebrew
+brew install llama.cpp
+
+# Run model-runner pointing to Homebrew installation
+LLAMA_SERVER_PATH=/opt/homebrew/bin MODEL_RUNNER_PORT=12434 ./model-runner
+```
+
+**Verification:**
+The logs should show:
+- `LLAMA_SERVER_PATH: /opt/homebrew/bin`
+- `No digest file found - assuming custom llama.cpp installation, skipping version check`
+- `installed llama-server with gpuSupport=true` (if Metal is available)
 
 ### Bundle Format (Distribution)
 Models are packaged with files in `model/` subdirectory:
